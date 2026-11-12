@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMINE QUEST - Амины нэгдлийн сорил</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #1e1b4b 50%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #0ea5e9, #6366f1);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+        }
+        .option-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #0ea5e9;
+        }
+        .option-correct {
+            background: rgba(34, 197, 94, 0.2) !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+        }
+        .option-wrong {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+        }
+
+        .floating-molecule {
+            position: absolute;
+            opacity: 0.1;
+            pointer-events: none;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-100px) rotate(180deg); }
+            100% { transform: translateY(0) rotate(360deg); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .streak-fire {
+            color: #fb923c;
+            text-shadow: 0 0 10px #f97316;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* Fun shake animation for wrong answers */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Print styles */
+        @media print {
+            body { background: white; color: black; }
+            .no-print { display: none !important; }
+            .glass-panel { background: white; border: 1px solid #ccc; box-shadow: none; filter: none; }
+            .text-cyan-400 { color: #0284c7 !important; }
+            .text-indigo-400 { color: #4338ca !important; }
+        }
+        
+        /* Hexagon background pattern */
+        .bg-pattern {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0.03' fill='%23ffffff' fill-rule='evenodd'/%3E%3C/svg%3E");
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="relative text-base md:text-lg">
+
+    <div class="bg-pattern"></div>
+    
+    <!-- Floating bg elements -->
+    <div class="floating-molecule text-6xl" style="top: 10%; left: 10%;">⌬</div>
+    <div class="floating-molecule text-8xl" style="top: 60%; left: 80%; animation-duration: 25s;">⚗️</div>
+    <div class="floating-molecule text-7xl" style="top: 30%; left: 70%; animation-duration: 18s;">NH₂</div>
+
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-8 min-h-screen flex flex-col justify-center">
+
+        <!-- 1. START SCREEN -->
+        <div id="start-screen" class="glass-panel rounded-2xl p-8 text-center animate-pop">
+            <div class="mb-6 flex justify-center">
+                <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center text-4xl shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+                    🧬
+                </div>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 mb-2">
+                AMINE QUEST
+            </h1>
+            <p class="text-xl text-indigo-200 mb-8 font-light tracking-wide">Органик химийн мэдлэгийн аялал</p>
+            
+            <div class="text-left bg-black/30 p-6 rounded-xl mb-8 border border-white/5">
+                <h3 class="text-lg font-semibold text-cyan-300 mb-3">Тоглоомын дүрэм:</h3>
+                <ul class="list-disc list-inside text-slate-300 space-y-2 text-sm md:text-base">
+                    <li>Нийт 6 үе шаттай. Амин нэгдлийг таних, нэрлэх, гарган авах, хувиргалт хийх чадварыг шалгана.</li>
+                    <li>Зөв хариулт +10 оноо, Ахисан түвшний даалгавар +20 оноо.</li>
+                    <li>3 дараалан зөв хариулбал +5 урамшууллын оноо.</li>
+                    <li>Хариултыг нэг л удаа сонгох тул анхааралтай байна уу.</li>
+                </ul>
+            </div>
+
+            <div class="max-w-md mx-auto">
+                <input type="text" id="player-name" placeholder="Сурагчийн нэрээ оруулна уу..." 
+                    class="w-full p-4 bg-white/10 border border-indigo-400/50 rounded-xl text-white placeholder-indigo-300/50 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 mb-6 text-center text-lg">
+                <button onclick="startGame()" class="btn-primary w-full py-4 rounded-xl text-white font-bold text-lg uppercase tracking-wider shadow-lg">
+                    Тоглоом Эхлүүлэх
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. GAME SCREEN -->
+        <div id="game-screen" class="hidden flex-col gap-4">
+            
+            <!-- Top Stats Bar -->
+            <div class="glass-panel rounded-xl p-4 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <div id="stage-name" class="text-cyan-400 font-bold text-sm md:text-lg uppercase tracking-wider">ҮЕ 1: МОЛЕКУЛЫН МӨРДӨГЧ</div>
+                    <div class="text-xs text-slate-400 mt-1" id="question-counter">Асуулт: 1 / 10</div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-center">
+                        <div class="text-xs text-indigo-300 uppercase">Оноо</div>
+                        <div id="score-display" class="font-bold text-2xl text-white">0</div>
+                    </div>
+                    <div class="text-center" id="streak-container" style="opacity: 0.5;">
+                        <div class="text-xs text-indigo-300 uppercase">Дараалал</div>
+                        <div class="font-bold text-xl"><span id="streak-display">0</span> 🔥</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2">
+                <div id="progress-bar" class="bg-gradient-to-r from-cyan-400 to-indigo-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass-panel rounded-2xl p-6 md:p-10 relative overflow-hidden">
+                <!-- Floating score animation container -->
+                <div id="floating-score" class="absolute top-4 right-4 text-2xl font-bold text-green-400 opacity-0 pointer-events-none transition-all duration-500 transform translate-y-4"></div>
+
+                <div id="question-text" class="text-xl md:text-2xl font-medium mb-8 text-center leading-relaxed">
+                    <!-- Question goes here -->
+                </div>
+
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Options go here -->
+                </div>
+
+                <!-- Feedback Area (Hidden initially) -->
+                <div id="feedback-area" class="mt-8 p-4 rounded-xl border hidden animate-pop">
+                    <div id="feedback-title" class="font-bold text-lg mb-2"></div>
+                    <div id="feedback-desc" class="text-sm md:text-base text-slate-200 leading-relaxed"></div>
+                    <button id="next-btn" onclick="nextQuestion()" class="btn-primary mt-4 px-6 py-2 rounded-lg text-white font-semibold float-right">
+                        Дараагийнх ➔
+                    </button>
+                    <div class="clear-both"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. RESULTS SCREEN -->
+        <div id="result-screen" class="hidden glass-panel rounded-2xl p-8 animate-pop">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-cyan-400 mb-2">ҮНЭЛГЭЭНИЙ ТАЙЛАН</h2>
+                <p id="result-name" class="text-xl text-slate-300"></p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-black/30 p-6 rounded-xl text-center border border-white/5">
+                    <div class="text-sm text-indigo-300 uppercase mb-1">Нийт оноо</div>
+                    <div id="final-score" class="text-4xl font-bold text-white">0</div>
+                </div>
+                <div class="bg-black/30 p-6 rounded-xl text-center border border-white/5">
+                    <div class="text-sm text-indigo-300 uppercase mb-1">Гүйцэтгэл</div>
+                    <div id="final-percent" class="text-4xl font-bold text-cyan-400">0%</div>
+                </div>
+                <div class="bg-black/30 p-6 rounded-xl text-center border border-white/5">
+                    <div class="text-sm text-indigo-300 uppercase mb-1">Түвшин</div>
+                    <div id="final-rank" class="text-2xl font-bold text-indigo-400 mt-2">...</div>
+                </div>
+            </div>
+
+            <!-- Skill Radar / Bars -->
+            <div class="bg-black/30 p-6 rounded-xl border border-white/5 mb-8">
+                <h3 class="text-lg font-semibold text-cyan-300 mb-4">Чадварын үзүүлэлт:</h3>
+                <div id="skills-container" class="space-y-4">
+                    <!-- Generated via JS -->
+                </div>
+            </div>
+
+            <div class="bg-indigo-900/40 p-6 rounded-xl border border-indigo-500/30 mb-8">
+                <h3 class="text-lg font-semibold text-white mb-2">Багшийн зөвлөмж:</h3>
+                <p id="recommendation-text" class="text-slate-300 text-sm md:text-base"></p>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-center gap-4 no-print">
+                <button onclick="showErrorLog()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-lg">
+                    Алдаагаа шалгах
+                </button>
+                <button onclick="window.print()" class="btn-primary px-6 py-3 rounded-xl text-white font-semibold shadow-lg">
+                    Тайлан хэвлэх
+                </button>
+                <button onclick="location.reload()" class="bg-red-500/80 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-lg">
+                    Дахин тоглох
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. ERROR LOG SCREEN -->
+        <div id="error-screen" class="hidden glass-panel rounded-2xl p-6 md:p-8 animate-pop">
+            <h2 class="text-2xl font-bold text-cyan-400 mb-6 flex items-center gap-2">
+                <span class="text-3xl">📓</span> Алдааны дэвтэр
+            </h2>
+            <div id="error-list" class="space-y-6 mb-8 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                <!-- Errors go here -->
+            </div>
+            <div class="text-center">
+                <button onclick="backToResults()" class="bg-slate-700 hover:bg-slate-600 px-8 py-3 rounded-xl font-semibold transition-colors">
+                    Буцах
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+</style>
+
+<script>
+    /* --- DATA: QUESTIONS BANK --- */
+    // Note: To keep the file manageable but functional, I've selected highly representative questions for each stage.
+    // The final boss pulls randomly from these.
+    
+    const db = [
+        // STAGE 1: MOLECULE DETECTIVE (Таних, ангилах)
+        { id: 1, stage: 1, skill: "Таних", type: "normal",
+          q: "CH₃-NH-CH₃ молекул нь ямар төрлийн амин бэ?",
+          options: ["Анхдагч амин", "Хоёрдогч амин", "Гуравдагч амин", "Дөрөвдөгч аммонийн давс"],
+          ans: 1,
+          exp: "Азотын атомд хоёр нүүрстөрөгчийн бүлэг (хоёр метил) холбогдсон тул <b>хоёрдогч амин</b> байна." },
+        { id: 2, stage: 1, skill: "Таних", type: "normal",
+          q: "Дараах нэгдлүүдээс <b>гуравдагч амин</b>-ыг сонгоно уу.",
+          options: ["CH₃CH₂NH₂", "CH₃-NH-C₂H₅", "(CH₃)₃N", "C₆H₅NH₂"],
+          ans: 2,
+          exp: "(CH₃)₃N (Триметиламин) нь азотын атомд 3 метилийн бүлэг холбогдсон тул гуравдагч амин юм." },
+        { id: 3, stage: 1, skill: "Таних", type: "normal",
+          q: "Амин болон амидыг ялгах гол шинж чанар юу вэ?",
+          options: ["Амин нь хүчилтөрөгч агуулдаг.", "Амид нь C=O (карбонил) бүлэгтэй холбогдсон азот агуулна.", "Амин нь зөвхөн цагираг бүтэцтэй.", "Амид нь усанд уусдаггүй."],
+          ans: 1,
+          exp: "Амид нь -CONH₂ бүлэг агуулдаг бөгөөд азотын атом шууд карбонилын (C=O) бүлгийн нүүрстөрөгчтэй холбогдсон байдгаараа аминаас ялгаатай." },
+        { id: 4, stage: 1, skill: "Таних", type: "normal",
+          q: "C₆H₅NH₂ буюу анилин нь ямар ангиллын амин бэ?",
+          options: ["Анхдагч ароматик амин", "Хоёрдогч ароматик амин", "Анхдагч алифатик амин", "Гуравдагч амин"],
+          ans: 0,
+          exp: "Анилин нь бензолын цагирагт ганц -NH₂ бүлэг холбогдсон байдаг тул <b>анхдагч ароматик амин</b> юм." },
+        { id: 5, stage: 1, skill: "Таних", type: "normal",
+          q: "Бүтцийн томьёонд N атомтай холбогдсон устөрөгчийн тоо 0 байвал уг амин нь:",
+          options: ["Анхдагч", "Хоёрдогч", "Гуравдагч", "Амин биш"],
+          ans: 2,
+          exp: "Аммиакийн (NH₃) гурван устөрөгч бүгд нүүрсустөрөгчийн радикалаар халагдсан үед гуравдагч амин үүсэх бөгөөд N атомд H үлдэхгүй." },
+
+        // STAGE 2: NAME MASTER (Нэршил)
+        { id: 6, stage: 2, skill: "Нэрлэх", type: "normal",
+          q: "CH₃CH₂NHCH₃ нэгдлийн ОУЦХА (IUPAC) нэршил аль нь вэ?",
+          options: ["Этилметиламин", "N-метилэтанамин", "Пропиламин", "N-этилметанамин"],
+          ans: 1,
+          exp: "Хамгийн урт хэлхээ нь 2 нүүрстөрөгчтэй (этанамин). Азот дээр метил бүлэг байгаа тул <b>N-метилэтанамин</b> гэж нэрлэнэ." },
+        { id: 7, stage: 2, skill: "Нэрлэх", type: "normal",
+          q: "Дараах нэгдлүүдээс <b>Фениламин</b>-ыг сонго.",
+          options: ["C₆H₅CH₂NH₂", "C₆H₁₁NH₂", "C₆H₅NH₂", "CH₃C₆H₄NH₂"],
+          ans: 2,
+          exp: "Фениламин буюу Анилин нь бензолын цагирагт шууд холбогдсон амин бүлэгтэй C₆H₅NH₂ юм. Харин C₆H₅CH₂NH₂ нь бензиламин юм." },
+        { id: 8, stage: 2, skill: "Нэрлэх", type: "normal",
+          q: "2-аминопропан гэдэг нэртэй тохирох бүтэц аль нь вэ?",
+          options: ["CH₃CH₂CH₂NH₂", "CH₃CH(NH₂)CH₃", "CH₃NHCH₂CH₃", "(CH₃)₃CNH₂"],
+          ans: 1,
+          exp: "Пропаны хэлхээний (3 нүүрстөрөгч) голын буюу 2-р нүүрстөрөгч дээр -NH₂ бүлэг байрласан бүтэц нь CH₃CH(NH₂)CH₃ юм." },
+        { id: 9, stage: 2, skill: "Нэрлэх", type: "normal",
+          q: "Триметиламин нэгдлийн системчилсэн нэр юу вэ?",
+          options: ["N,N-диметилметанамин", "N-метилэтанамин", "Пропанамин", "N,N-диметилэтанамин"],
+          ans: 0,
+          exp: "(CH₃)₃N нэгдлийн үндсэн хэлхээ нь 1С (метанамин), N атом дээр хоёр метил байгаа тул <b>N,N-диметилметанамин</b> болно." },
+        { id: 10, stage: 2, skill: "Нэрлэх", type: "normal",
+          q: "Буруу нэрлэгдсэн хувилбарыг сонгоно уу.",
+          options: ["CH₃NH₂ : Метиламин", "(CH₃CH₂)₂NH : Диэтиламин", "C₆H₅NH₂ : Циклогексиламин", "NH₂CH₂CH₂NH₂ : 1,2-этандиамин"],
+          ans: 2,
+          exp: "C₆H₅NH₂ нь анилин буюу фениламин юм. Циклогексиламин нь ароматик биш, ханасан 6-н өнцөгт цагирагтай (C₆H₁₁NH₂) байна." },
+
+        // STAGE 3: SYNTHESIS LAB (Гарган авах)
+        { id: 11, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "Нитробензолыг (C₆H₅NO₂) цагаан тугалга (Sn) болон давсны хүчил (HCl) ашиглан ангижруулахад ямар бодис үүсэх вэ?",
+          options: ["Бензиламин", "Анилин (Фениламин)", "Циклогексиламин", "Нитрозобензол"],
+          ans: 1,
+          exp: "Нитро бүлэг (-NO₂) ангижран амин бүлэг (-NH₂) болж, <b>Анилин (C₆H₅NH₂)</b> үүснэ." },
+        { id: 12, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "Хоффманы бромамидын задралын урвалаар CH₃CH₂CONH₂ (Пропанамид) ямар амин болон хувирах вэ?",
+          options: ["Пропиламин (CH₃CH₂CH₂NH₂)", "Этиламин (CH₃CH₂NH₂)", "Метиламин (CH₃NH₂)", "Урвалд орохгүй"],
+          ans: 1,
+          exp: "Хоффманы урвалаар амид (-CONH₂) нь карбонилын нүүрстөрөгчөө алдаж, нүүрстөрөгчийн тоо <b>1-ээр багассан</b> анхдагч амин (Этиламин) үүсгэдэг." },
+        { id: 13, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "CH₃CN (Этаннитрил) нэгдлийг LiAlH₄ ашиглан ангижруулахад үүсэх бүтээгдэхүүнийг нэрлэ.",
+          options: ["Метиламин", "Этиламин", "Этанамид", "Диметиламин"],
+          ans: 1,
+          exp: "Нитрилийн бүлэг (-C≡N) ангижран -CH₂NH₂ болдог. 2 нүүрстөрөгчтэй этаннитрил нь <b>этиламин (CH₃CH₂NH₂)</b> болно." },
+        { id: 14, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "Галогеналканыг (жишээ нь CH₃Br) илүүдэл аммиактай (NH₃) халаахад голчлон ямар амин үүсдэг вэ?",
+          options: ["Анхдагч амин", "Хоёрдогч амин", "Гуравдагч амин", "Дөрөвдөгч давс"],
+          ans: 0,
+          exp: "Аммиакийг <b>илүүдэл</b> хэмжээгээр авсан үед урвал голчлон эхний шатанд зогсож, <b>анхдагч амин</b> үүсдэг." },
+        { id: 15, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "Амид (-CONH₂) нэгдлийг LiAlH₄-өөр ангижруулахад ямар өөрчлөлт гардаг вэ?",
+          options: ["C=O бүлэг -CH₂- бүлэг болж анхдагч амин үүснэ.", "C=O бүлэг тасарч нүүрстөрөгч дундарна.", "-NH₂ бүлэг салж спирт үүснэ.", "Урвал явагдахгүй."],
+          ans: 0,
+          exp: "LiAlH₄ хүчтэй ангижруулагч тул амидын карбонилын бүлгийг (C=O) метилен (-CH₂-) болгон ангижруулж, нүүрстөрөгчийн хэлхээг хадгалсан амин үүсгэдэг." },
+
+        // STAGE 4: REACTION PUZZLE (Урвалын тэгшитгэл)
+        { id: 16, stage: 4, skill: "Урвал", type: "normal",
+          q: "Тэгшитгэлийг гүйцээнэ үү: C₂H₅Br + 2NH₃ → ? + NH₄Br",
+          options: ["C₂H₅NH₂", "CH₃NH₂", "(C₂H₅)₂NH", "C₂H₅OH"],
+          ans: 0,
+          exp: "Бромэтан нь аммиактай нуклеофил халалцах урвалд орж <b>этиламин (C₂H₅NH₂)</b> болон аммонийн бромид үүсгэнэ." },
+        { id: 17, stage: 4, skill: "Урвал", type: "normal",
+          q: "Хувиргалтыг гүйцээнэ үү: CH₃NO₂ → (X) → CH₃NH₂. (X) урвалын нөхцөл юу вэ?",
+          options: ["Br₂ / NaOH", "Sn / үт. HCl", "NH₃ халаах", "KCN / этанол"],
+          ans: 1,
+          exp: "Нитрометаныг метиламин болгон ангижруулах хамгийн түгээмэл нөхцөл нь цагаан тугалга болон өтгөн давсны хүчил (Sn/HCl) юм." },
+        { id: 18, stage: 4, skill: "Урвал", type: "normal",
+          q: "Урвалын дарааллыг ажигла: C₂H₅Cl --(KCN)--> A --(LiAlH₄)--> B. 'B' бодисыг нэрлэ.",
+          options: ["Этиламин", "Пропиламин", "Пропанамид", "Этанол"],
+          ans: 1,
+          exp: "C₂H₅Cl + KCN -> C₂H₅CN (Пропаннитрил 3С). Пропаннитрилийг ангижруулахад 3 нүүрстөрөгчтэй <b>Пропиламин (C₂H₅CH₂NH₂)</b> үүснэ." },
+        { id: 19, stage: 4, skill: "Урвал", type: "normal",
+          q: "Тэгшитгэлийн дутууг нөх: CH₃CONH₂ + Br₂ + 4NaOH → ? + Na₂CO₃ + 2NaBr + 2H₂O",
+          options: ["CH₃CH₂NH₂", "CH₃NH₂", "HCOONa", "(CH₃)₂NH"],
+          ans: 1,
+          exp: "Энэ нь Хоффманы бромамидын урвал. Этанамид (2C) задарч нэг нүүрстөрөгч дундаж, <b>метиламин (1C буюу CH₃NH₂)</b> үүснэ." },
+        { id: 20, stage: 4, skill: "Урвал", type: "normal",
+          q: "Аминууд хүчилтэй (жишээ нь HCl) ямар шинж чанараараа урвалд орж давс үүсгэдэг вэ?",
+          options: ["Хүчиллэг шинж", "Суурилаг шинж", "Исэлдүүлэх шинж", "Саармаг шинж"],
+          ans: 1,
+          exp: "Азотын атом дээрх хуваагдаагүй хос электроны улмаас аминууд протоныг (H⁺) өөртөө нэгтгэх буюу Льюисийн <b>суурийн</b> шинж чанар үзүүлж давс үүсгэдэг." },
+
+        // STAGE 5: CHEMISTRY CHALLENGE (Ахисан түвшин +20 оноо)
+        { id: 21, stage: 5, skill: "Хувиргалт", type: "advanced",
+          q: "Стратеги: Бромметанаас (CH₃Br) ЭТИЛАМИН (CH₃CH₂NH₂) гарган авах хамгийн оновчтой хоёр шатлалт арга аль нь вэ?",
+          options: ["1. NH₃ үйлчлэх, 2. CH₃Br дахин нэмэх", "1. KCN үйлчлэх, 2. H₂/Ni эсвэл LiAlH₄-өөр ангижруулах", "1. NaOH (усан) үйлчлэх, 2. NH₃ үйлчлэх", "1. Mg/эфир нэмэх, 2. Усаар үйлчлэх"],
+          ans: 1,
+          exp: "Зорилтот бодис 2 нүүрстөрөгчтэй тул хэлхээг уртасгах шаардлагатай. CH₃Br + KCN -> CH₃CN (этаннитрил). Үүнийг ангижруулж CH₃CH₂NH₂ гарган авна." },
+        { id: 22, stage: 5, skill: "Хувиргалт", type: "advanced",
+          q: "Анилин (C₆H₅NH₂) нь метиламинаас (CH₃NH₂) яагаад илүү сул суурь вэ?",
+          options: ["Анилин усанд сайн уусдаг учраас.", "Бензолын цагиргийн π-электроны системтэй азотын хос электрон хосолж (резонанс) протон нэгтгэх идэвхийг бууруулдаг.", "Метилийн бүлэг электрон татах индукцийн эффект үзүүлдэг.", "Анилин нь хоёрдогч амин учраас."],
+          ans: 1,
+          exp: "Азотын атом дээрх хос электрон бензолын цагираг руу татагдан резонанст ордог тул H⁺ ионыг өөртөө нэгтгэх чадвар буурдаг." },
+        { id: 23, stage: 5, skill: "Хувиргалт", type: "advanced",
+          q: "Урвалын холимгоос 1, 2, 3-дагч аминыг салгах эсвэл ялгах (Хинсбергийн сорил) урвалд ямар урвалж ашигладаг вэ?",
+          options: ["Бензолсульфонил хлорид (C₆H₅SO₂Cl)", "Толленсийн урвалж", "Бромын ус", "Төмөр (III)-ийн хлорид"],
+          ans: 0,
+          exp: "Хинсбергийн сорилд бензолсульфонил хлоридыг ашигладаг бөгөөд 1, 2, 3-дагч аминууд өөр өөрөөр урвалд орж ялгагддаг." },
+        
+        // Шинээр нэмэгдсэн Гарган авах аргын асуултууд
+        { id: 24, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "🧪 Лабораторид пропиламин (CH₃CH₂CH₂NH₂) гарган авах шаардлагатай болов. Габриэлийн фталимидын нийлэгжүүлэлт ашиглах нь ямар гол давуу талтай вэ?",
+          options: ["Урвал маш хурдан явагддаг.", "Зөвхөн цэвэр анхдагч амин үүснэ, хоёрдогч болон гуравдагч амины хольц үүсэхгүй.", "Урвал тасалгааны температурт катализаторгүй явагддаг.", "Ус ялгарч их хэмжээний дулаан ялгаруулдаг."],
+          ans: 1,
+          exp: "Габриэлийн нийлэгжүүлэлт нь зөвхөн цэвэр <b>анхдагч амин</b> гарган авах шилдэг арга бөгөөд олон дахин алкилжих урвал явагдахаас бүрэн сэргийлдэг." },
+        { id: 25, stage: 3, skill: "Гарган авах", type: "normal",
+          q: "🔥 Үйлдвэрт нитробензолыг (C₆H₅NO₂) анилин болгон их хэмжээгээр ангижруулахдаа голдуу юуг катализатор болгон ашиглаж, устөрөгчийн хийгээр үйлчилддэг вэ?",
+          options: ["Никель (Ni) эсвэл Палладий (Pd)", "Хөнгөнцагаан (Al)", "Натри (Na)", "Хүхрийн хүчил (H₂SO₄)"],
+          ans: 0,
+          exp: "Үйлдвэрт нитро нэгдлийг <b>шилжилтийн металл катализаторын (Ni, Pd, Pt)</b> оролцоотойгоор устөрөгчийн хийгээр (H₂) шууд ангижруулж амин гарган авдаг." }
+    ];
+
+    /* --- GAME STATE --- */
+    const stagesConfig = [
+        { id: 1, name: "ҮЕ 1: МОЛЕКУЛЫН МӨРДӨГЧ", desc: "Амин нэгдлийг таних, ангилах", count: 4, pool: [1,2,3,4,5] },
+        { id: 2, name: "ҮЕ 2: НЭРШЛИЙН МАСТЕР", desc: "Амин нэгдлийг нэрлэх", count: 4, pool: [6,7,8,9,10] },
+        { id: 3, name: "ҮЕ 3: ГАРГАН АВАХ ЛАБОРАТОРИ", desc: "Амин гарган авах аргууд", count: 5, pool: [11,12,13,14,15,24,25] },
+        { id: 4, name: "ҮЕ 4: УРВАЛЫН ЭВЛҮҮЛЭГ", desc: "Урвалын тэгшитгэл гүйцээх", count: 4, pool: [16,17,18,19,20] },
+        { id: 5, name: "ҮЕ 5: ХИМИЙН СТРАТЕГИЧ", desc: "Ахисан түвшний хувиргалт", count: 3, pool: [21,22,23] },
+        { id: 6, name: "ЭЦСИЙН СОРИЛ", desc: "Нийтлэг шалгалт (Холимог)", count: 6, pool: "ALL" }
+    ];
+
+    let gameState = {
+        name: "",
+        score: 0,
+        streak: 0,
+        currentStageIndex: 0,
+        questionQueue: [], // Questions for the current stage
+        currentQuestionIndex: 0, // Index in the queue
+        totalQuestionsAnswered: 0,
+        totalQuestionsInGame: 0, // Calculated at start
+        stats: {
+            "Таних": { total: 0, correct: 0 },
+            "Нэрлэх": { total: 0, correct: 0 },
+            "Гарган авах": { total: 0, correct: 0 },
+            "Урвал": { total: 0, correct: 0 },
+            "Хувиргалт": { total: 0, correct: 0 }
+        },
+        errorLog: [] // { q, userAnsText, correctAnsText, exp }
+    };
+
+    /* --- UTILS --- */
+    function shuffleArray(array) {
+        let curId = array.length;
+        while (0 !== curId) {
+            let randId = Math.floor(Math.random() * curId);
+            curId -= 1;
+            let tmp = array[curId];
+            array[curId] = array[randId];
+            array[randId] = tmp;
+        }
+        return array;
+    }
+
+    function getQuestionById(id) {
+        return db.find(q => q.id === id);
+    }
+
+    /* --- INITIALIZATION --- */
+    function startGame() {
+        const nameInput = document.getElementById('player-name').value.trim();
+        if (!nameInput) {
+            alert("Тоглоом эхлэхийн тулд нэрээ оруулна уу.");
+            return;
+        }
+        gameState.name = nameInput;
+        gameState.score = 0;
+        gameState.streak = 0;
+        gameState.currentStageIndex = 0;
+        gameState.totalQuestionsAnswered = 0;
+        gameState.errorLog = [];
+
+        // Reset stats
+        for (let key in gameState.stats) {
+            gameState.stats[key].total = 0;
+            gameState.stats[key].correct = 0;
+        }
+
+        // Calculate total questions
+        gameState.totalQuestionsInGame = stagesConfig.reduce((acc, stage) => acc + stage.count, 0);
+
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('flex');
+
+        loadStageSetup();
+    }
+
+    function loadStageSetup() {
+        const stage = stagesConfig[gameState.currentStageIndex];
+        
+        let poolIds = [];
+        if (stage.pool === "ALL") {
+            // Final boss: select mix from all previous DB
+            poolIds = db.map(q => q.id);
+        } else {
+            poolIds = [...stage.pool];
+        }
+
+        shuffleArray(poolIds);
+        
+        // Select 'count' questions for this stage
+        const selectedIds = poolIds.slice(0, stage.count);
+        gameState.questionQueue = selectedIds.map(id => getQuestionById(id));
+        gameState.currentQuestionIndex = 0;
+
+        document.getElementById('stage-name').innerText = stage.name;
+        
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const qObj = gameState.questionQueue[gameState.currentQuestionIndex];
+        const stage = stagesConfig[gameState.currentStageIndex];
+        
+        // Update counters
+        document.getElementById('question-counter').innerText = 
+            `Асуулт: ${gameState.currentQuestionIndex + 1} / ${stage.count}`;
+        
+        // Update Progress bar overall
+        const overallProgress = (gameState.totalQuestionsAnswered / gameState.totalQuestionsInGame) * 100;
+        document.getElementById('progress-bar').style.width = `${overallProgress}%`;
+
+        // Render text
+        document.getElementById('question-text').innerHTML = qObj.q;
+
+        // Render options
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        
+        qObj.options.forEach((optText, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn w-full text-left p-4 rounded-xl text-slate-200 font-medium md:text-lg hover:text-white flex items-center gap-3';
+            btn.innerHTML = `<span class="bg-indigo-900/50 w-8 h-8 rounded-lg flex items-center justify-center text-sm">${String.fromCharCode(65 + index)}</span> <span>${optText}</span>`;
+            btn.onclick = () => checkAnswer(index, btn);
+            optsContainer.appendChild(btn);
+        });
+
+        // Hide feedback
+        document.getElementById('feedback-area').classList.add('hidden');
+        document.getElementById('feedback-area').classList.remove('animate-pop');
+    }
+
+    function checkAnswer(selectedIndex, btnElement) {
+        // Disable all options
+        const optsContainer = document.getElementById('options-container');
+        const allBtns = optsContainer.querySelectorAll('button');
+        allBtns.forEach(b => {
+            b.disabled = true;
+            b.classList.remove('hover:border-cyan-400', 'hover:text-white');
+        });
+
+        const qObj = gameState.questionQueue[gameState.currentQuestionIndex];
+        const isCorrect = (selectedIndex === qObj.ans);
+        
+        // Tracking stats
+        if (gameState.stats[qObj.skill]) {
+            gameState.stats[qObj.skill].total++;
+        }
+
+        let pointsEarned = 0;
+
+        if (isCorrect) {
+            btnElement.classList.add('option-correct');
+            
+            // Base points
+            pointsEarned = (qObj.type === 'advanced') ? 20 : 10;
+            gameState.streak++;
+            
+            // Bonus
+            let bonusText = "";
+            if (gameState.streak >= 3) {
+                pointsEarned += 5;
+                bonusText = " +5 Бонус! 🔥";
+                document.getElementById('streak-display').parentElement.classList.add('streak-fire');
+            }
+            
+            gameState.score += pointsEarned;
+            if (gameState.stats[qObj.skill]) gameState.stats[qObj.skill].correct++;
+
+            showFloatingScore(`+${pointsEarned}${bonusText}`);
+            showFeedback(true, qObj.exp);
+        } else {
+            btnElement.classList.add('option-wrong');
+            // Highlight correct one
+            allBtns[qObj.ans].classList.add('option-correct');
+            
+            gameState.streak = 0;
+            document.getElementById('streak-display').parentElement.classList.remove('streak-fire');
+
+            // Save to error log
+            gameState.errorLog.push({
+                q: qObj.q,
+                userAns: qObj.options[selectedIndex],
+                correctAns: qObj.options[qObj.ans],
+                exp: qObj.exp
+            });
+
+            showFeedback(false, qObj.exp);
+        }
+
+        // Update top bar
+        document.getElementById('score-display').innerText = gameState.score;
+        document.getElementById('streak-display').innerText = gameState.streak;
+        document.getElementById('streak-container').style.opacity = gameState.streak > 0 ? "1" : "0.5";
+        
+        gameState.totalQuestionsAnswered++;
+    }
+
+    function showFloatingScore(text) {
+        const floatEl = document.getElementById('floating-score');
+        floatEl.innerText = text;
+        floatEl.style.opacity = '1';
+        floatEl.style.transform = 'translateY(0)';
+        
+        setTimeout(() => {
+            floatEl.style.opacity = '0';
+            floatEl.style.transform = 'translateY(20px)';
+        }, 1500);
+    }
+
+    function showFeedback(isCorrect, explanation) {
+        const area = document.getElementById('feedback-area');
+        const title = document.getElementById('feedback-title');
+        const desc = document.getElementById('feedback-desc');
+        const qContainer = document.getElementById('question-text').parentElement;
+
+        area.classList.remove('hidden');
+        // trigger reflow for animation
+        void area.offsetWidth;
+        area.classList.add('animate-pop');
+        
+        // Fun randomized praises
+        const correctPraises = ["ЯГ ЗӨВ! 🎉", "АГУУ ИХ! 🚀", "МАШ САЙН! 🌟", "ТӨГС! 💎", "ГАЙХАЛТАЙ! 🔥", "МЭДРЭМЖТЭЙ! 🧠"];
+        const wrongEncouragements = ["БУРУУ ХАРИУЛТ! ❌", "ӨӨХ, АЛДЧИХЛАА! 😅", "ДАХИАД БОДООРОЙ! 🤔", "САЙН ОРОЛДЛОГО! ГЭХДЭЭ... 🧐"];
+
+        if (isCorrect) {
+            area.className = 'mt-8 p-6 rounded-xl border border-green-500/30 bg-green-900/20 animate-pop';
+            const praise = correctPraises[Math.floor(Math.random() * correctPraises.length)];
+            title.innerHTML = `<span class="text-green-400">${praise}</span>`;
+        } else {
+            area.className = 'mt-8 p-6 rounded-xl border border-red-500/30 bg-red-900/20 animate-pop';
+            const enc = wrongEncouragements[Math.floor(Math.random() * wrongEncouragements.length)];
+            title.innerHTML = `<span class="text-red-400">${enc}</span>`;
+            
+            // Add shake animation for wrong answers
+            qContainer.classList.add('animate-shake');
+            setTimeout(() => qContainer.classList.remove('animate-shake'), 500);
+        }
+        
+        desc.innerHTML = explanation;
+    }
+
+    function nextQuestion() {
+        gameState.currentQuestionIndex++;
+        
+        if (gameState.currentQuestionIndex < gameState.questionQueue.length) {
+            renderQuestion();
+        } else {
+            // Stage Complete
+            gameState.currentStageIndex++;
+            if (gameState.currentStageIndex < stagesConfig.length) {
+                // Transition effect could go here
+                loadStageSetup();
+            } else {
+                // Game Complete
+                showResults();
+            }
+        }
+    }
+
+    /* --- RESULTS & EVALUATION --- */
+    function showResults() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('flex');
+        
+        const resScreen = document.getElementById('result-screen');
+        resScreen.classList.remove('hidden');
+
+        document.getElementById('result-name').innerText = `Сурагч: ${gameState.name}`;
+        document.getElementById('final-score').innerText = gameState.score;
+        
+        // Max possible score logic is a bit complex due to random selection and streak bonuses.
+        // We will calculate a percentage based on correct answers instead for the rank.
+        const totalCorrect = Object.values(gameState.stats).reduce((sum, stat) => sum + stat.correct, 0);
+        const percent = Math.round((totalCorrect / gameState.totalQuestionsInGame) * 100);
+        
+        document.getElementById('final-percent').innerText = `${percent}%`;
+
+        let rank = "";
+        let rec = "";
+        let rankColor = "";
+
+        if (percent >= 90) {
+            rank = "МАСТЕР 🏆"; rankColor = "text-yellow-400";
+            rec = "Маш сайн! Та амин нэгдлийн сэдвийг гүнзгий бөгөөд бүрэн эзэмшжээ. Одоо их сургуулийн түвшний органик химийн механизм судлахад бэлэн байна.";
+        } else if (percent >= 80) {
+            rank = "ЭКСПЕРТ 🌟"; rankColor = "text-green-400";
+            rec = "Сайн байна! Гол ойлголтуудаа маш сайн мэддэг болсон байна. Алдсан цөөн асуултаа алдааны дэвтрээс шалгаад мэдлэгээ төгс болгоорой.";
+        } else if (percent >= 60) {
+            rank = "СУДЛААЧ 🔬"; rankColor = "text-cyan-400";
+            rec = "Дажгүй шүү. Гэхдээ зарим урвалын тэгшитгэл болон хувиргалт дээр дахин бататгах шаардлагатай байна. Сурах бичгийн 'Амин гарган авах' хэсгийг дахин уншаарай.";
+        } else {
+            rank = "ДАДЛАГАЖИГЧ 🧪"; rankColor = "text-slate-400";
+            rec = "Суурь ойлголтуудаа дахин сэргээн судлах шаардлагатай байна. Амины ангилал болон нэршлийн дүрмээс эхлэн дахин уншиж, дасгал сайн ажиллаарай.";
+        }
+
+        const rankEl = document.getElementById('final-rank');
+        rankEl.innerText = rank;
+        rankEl.className = `text-2xl font-bold mt-2 ${rankColor}`;
+        document.getElementById('recommendation-text').innerText = rec;
+
+        // Render skill bars
+        const skillsCont = document.getElementById('skills-container');
+        skillsCont.innerHTML = '';
+
+        for (const [skillName, data] of Object.entries(gameState.stats)) {
+            if (data.total === 0) continue;
+            const p = Math.round((data.correct / data.total) * 100);
+            
+            let barColor = "bg-red-500";
+            if (p >= 80) barColor = "bg-green-500";
+            else if (p >= 50) barColor = "bg-yellow-500";
+
+            const skillHTML = `
+                <div class="mb-3">
+                    <div class="flex justify-between text-sm mb-1 text-slate-300">
+                        <span>${skillName}</span>
+                        <span>${data.correct} / ${data.total} (${p}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div class="${barColor} h-2 rounded-full" style="width: ${p}%"></div>
+                    </div>
+                </div>
+            `;
+            skillsCont.innerHTML += skillHTML;
+        }
+    }
+
+    /* --- ERROR LOG --- */
+    function showErrorLog() {
+        document.getElementById('result-screen').classList.add('hidden');
+        const errScreen = document.getElementById('error-screen');
+        errScreen.classList.remove('hidden');
+
+        const list = document.getElementById('error-list');
+        list.innerHTML = '';
+
+        if (gameState.errorLog.length === 0) {
+            list.innerHTML = `<div class="text-center text-green-400 py-10 text-xl">Баяр хүргэе! Танд ямар ч алдаа байхгүй байна. 🥳</div>`;
+            return;
+        }
+
+        gameState.errorLog.forEach((err, idx) => {
+            const el = document.createElement('div');
+            el.className = "bg-white/5 border border-white/10 rounded-xl p-5";
+            el.innerHTML = `
+                <div class="font-bold text-lg mb-3 text-slate-100">${idx+1}. ${err.q}</div>
+                <div class="grid md:grid-cols-2 gap-4 mb-3 text-sm">
+                    <div class="bg-red-900/30 border border-red-500/50 p-3 rounded-lg text-red-200">
+                        <span class="block text-xs text-red-400 uppercase mb-1">Таны сонголт:</span>
+                        ${err.userAns}
+                    </div>
+                    <div class="bg-green-900/30 border border-green-500/50 p-3 rounded-lg text-green-200">
+                        <span class="block text-xs text-green-400 uppercase mb-1">Зөв хариулт:</span>
+                        ${err.correctAns}
+                    </div>
+                </div>
+                <div class="bg-indigo-900/30 p-3 rounded-lg text-sm text-indigo-100 border border-indigo-500/30">
+                    <span class="font-bold text-indigo-300">Тайлбар:</span> ${err.exp}
+                </div>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function backToResults() {
+        document.getElementById('error-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+    }
+
+</script>
+</body>
+</html>
